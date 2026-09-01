@@ -22,7 +22,7 @@ VALUES ('Rubor', 220.00, 20),
 DBCC CHECKDB ('LaboratorioBackup') WITH NO_INFOMSGS;
 
 BACKUP DATABASE LaboratorioBackup
-    TO DISK = '/var/opt/mssql/backup/LaboratorioBackup.bak'
+    TO DISK = '/var/opt/mssql/backup/LaboratorioBackupPC.bak'
     WITH INIT,
     NAME = 'Backup completo - LaboratorioBackup',
     STATS = 10;
