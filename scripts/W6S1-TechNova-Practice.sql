@@ -627,7 +627,7 @@ IF OBJECT_ID(N'reportes.ProductosBodega', N'SN') IS NULL
 
 GRANT SELECT ON OBJECT::[reportes].[ProductosBodega] TO OperadorVentas;
 
--- Referencia directa de cuatro partes.
+-- Referencia directa de cuatro partes (Ejecutar desde OperadorVentas)
 USE TechNova_Central;
 
 SELECT TOP (5) ProductoID,
@@ -637,7 +637,7 @@ SELECT TOP (5) ProductoID,
 FROM [SERVIDOR_BODEGA].[TechNova_Bodega].[inventario].[Productos]
 ORDER BY ProductoID;
 
--- La misma consulta utilizando el sinónimo.
+-- La misma consulta utilizando el sinónimo (Ejecutar desde OperadorVentas)
 USE TechNova_Sinonimos
 
 SELECT TOP (5) ProductoID,
@@ -651,3 +651,98 @@ ORDER BY ProductoID;
 -- =====================================================
 -- === 12. Verificación de integridad y recuperación ===
 -- =====================================================
+
+-- === mssql-dev ===
+USE master;
+
+
+-- Backup de TechNova_Central
+DBCC CHECKDB ('TechNova_Central') WITH NO_INFOMSGS;
+
+BACKUP DATABASE TechNova_Central
+    TO DISK = '/var/opt/mssql/backup/TechNova_Central.bak'
+    WITH INIT,
+    NAME = 'Backup completo - TechNova_Central',
+    STATS = 10;
+
+-- Verificación
+RESTORE VERIFYONLY FROM DISK = '/var/opt/mssql/backup/TechNova_Central.bak';
+
+-- Simular pérdida de datos
+USE TechNova_Central
+
+ALTER TABLE ventas.DetallePedido
+    DROP CONSTRAINT FK_Detalle_Pedido;
+
+DROP TABLE ventas.Pedidos;
+
+-- Restaurar base de datos desde archivo .bak
+USE master;
+
+ALTER DATABASE TechNova_Central
+    SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+
+RESTORE DATABASE TechNova_Central
+    FROM DISK = '/var/opt/mssql/backup/TechNova_Central.bak'
+    WITH REPLACE,
+    STATS = 10;
+
+ALTER DATABASE TechNova_Central
+    SET MULTI_USER;
+
+-- Verificar la restauración
+USE TechNova_Central
+
+SELECT *
+FROM ventas.Pedidos;
+
+DBCC CHECKDB ('TechNova_Central') WITH NO_INFOMSGS;
+
+
+-- === mssql-lab ===
+USE master;
+
+-- Backup de TechNova_Bodega (mssql-lab)
+DBCC CHECKDB ('TechNova_Bodega') WITH NO_INFOMSGS;
+
+BACKUP DATABASE TechNova_Bodega
+    TO DISK = '/var/opt/mssql/backup/TechNova_Bodega.bak'
+    WITH INIT,
+    NAME = 'Backup completo - TechNova_Central',
+    STATS = 10;
+
+-- Verificación
+RESTORE VERIFYONLY FROM DISK = '/var/opt/mssql/backup/TechNova_Bodega.bak';
+
+-- Simular pérdida de datos
+USE TechNova_Bodega;
+
+ALTER TABLE inventario.MovimientosInventario
+    DROP CONSTRAINT FK_Movimientos_Producto;
+
+DROP TABLE inventario.Productos;
+
+-- Restaurar bases de datos desde archivo .bak
+USE master;
+
+ALTER DATABASE TechNova_Bodega
+    SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+
+RESTORE DATABASE TechNova_Bodega
+    FROM DISK = '/var/opt/mssql/backup/TechNova_Bodega.bak'
+    WITH REPLACE,
+    STATS = 10;
+
+ALTER DATABASE TechNova_Bodega
+    SET MULTI_USER;
+
+-- Verificar la restauración
+
+USE TechNova_Bodega;
+
+SELECT *
+FROM inventario.Productos;
+
+DBCC CHECKDB ('TechNova_Bodega') WITH NO_INFOMSGS;
+
+
