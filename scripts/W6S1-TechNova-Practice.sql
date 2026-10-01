@@ -389,7 +389,10 @@ ORDER BY r.name,
 -- === 7. Pruebas de permisos y mínimo privilegio ===
 -- ==================================================
 
+
 -- Operador Ventas (mssql-dev)
+USE TechNova_Central
+
 EXECUTE AS USER = 'OperadorVentas';
 
 SELECT *
@@ -512,6 +515,7 @@ WHERE name = N'SERVIDOR_BODEGA';
 -- === 9. Consulta distribuida de pedidos y productos ===
 -- ======================================================
 USE TechNova_Central;
+
 SELECT SUSER_SNAME() AS LoginActual,
        USER_NAME()   AS UsuarioActual,
        DB_NAME()     AS BaseDatosActual;
@@ -653,10 +657,10 @@ ORDER BY ProductoID;
 -- =====================================================
 
 -- === mssql-dev ===
-USE master;
-
 
 -- Backup de TechNova_Central
+USE master;
+
 DBCC CHECKDB ('TechNova_Central') WITH NO_INFOMSGS;
 
 BACKUP DATABASE TechNova_Central
@@ -700,9 +704,10 @@ DBCC CHECKDB ('TechNova_Central') WITH NO_INFOMSGS;
 
 
 -- === mssql-lab ===
-USE master;
 
 -- Backup de TechNova_Bodega (mssql-lab)
+USE master;
+
 DBCC CHECKDB ('TechNova_Bodega') WITH NO_INFOMSGS;
 
 BACKUP DATABASE TechNova_Bodega
