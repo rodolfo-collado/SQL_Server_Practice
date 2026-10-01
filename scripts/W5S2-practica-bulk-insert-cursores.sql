@@ -335,7 +335,7 @@ FROM dbo.COMPARATIVO_CONSUMO_DIARIO
 ORDER BY DIA;
 
 -- =============================
--- === 12. Parte distribuida ===
+-- === 1. Parte distribuida ===
 -- =============================
 
 SELECT name,

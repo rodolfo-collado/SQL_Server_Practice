@@ -272,6 +272,34 @@ WHERE sp.name IN (
                   'Consulta_Remota'
     );
 
+-- Ver loggins del servidor
+USE master;
+GO
+
+SELECT SP.name                                       AS Login_Name,
+       SP.type_desc                                  AS Login_Type,
+       SP.is_disabled                                AS Is_Disabled,
+       SP.default_database_name                      AS Default_Database,
+       SP.default_language_name                      AS Default_Language,
+       SP.create_date                                AS Created_Date,
+       SP.modify_date                                AS Modified_Date,
+       SL.is_policy_checked                          AS Password_Policy_Checked,
+       SL.is_expiration_checked                      AS Password_Expiration_Checked,
+       SL.password_hash                              AS Password_Hash,
+       LOGINPROPERTY(SP.name, 'IsLocked')            AS Is_Locked,
+       LOGINPROPERTY(SP.name, 'BadPasswordCount')    AS Bad_Password_Count,
+       LOGINPROPERTY(SP.name, 'DaysUntilExpiration') AS Days_Until_Expiration
+FROM sys.server_principals AS SP
+         LEFT JOIN sys.sql_logins AS SL
+                   ON SL.principal_id = SP.principal_id
+WHERE SP.type IN
+      (
+       'S', -- SQL_LOGIN
+       'U', -- WINDOWS_LOGIN
+       'G' -- WINDOWS_GROUP
+          )
+ORDER BY SP.name;
+
 -- =========================================
 -- === 6. Creación y asignación de Roles ===
 -- =========================================
@@ -282,7 +310,7 @@ USE TechNova_Central;
 CREATE ROLE rol_ventas;
 
 GRANT SELECT ON comercial.Clientes TO rol_ventas;
-GRANT INSERT ON ventas.DetallePedido TO rol_ventas;
+GRANT SELECT, INSERT ON ventas.DetallePedido TO rol_ventas;
 GRANT SELECT, INSERT ON ventas.Pedidos TO rol_ventas;
 
 ALTER ROLE rol_ventas
@@ -368,7 +396,11 @@ SELECT *
 FROM comercial.Clientes;
 
 INSERT INTO ventas.Pedidos (ClienteID, FechaPedido, Estado, total)
-VALUES (1, '2026-`09-10', 'Facturado', 0)
+VALUES (1, '2026-09-10', 'Facturado', 0)
+
+DELETE
+FROM ventas.Pedidos
+WHERE PedidoID = 2003;
 
 DROP TABLE ventas.Pedidos;
 
@@ -379,6 +411,8 @@ WHERE PedidoID = 1002;
 REVERT;
 
 -- Operador Inventario (mssql-lab)
+USE TechNova_Bodega;
+
 EXECUTE AS USER = 'OperadorInventario'
 
 SELECT *
@@ -386,36 +420,234 @@ FROM inventario.Productos;
 
 INSERT INTO inventario.MovimientosInventario
     (ProductoID, FechaMovimiento, TipoMovimiento, Cantidad, Referencia)
-values (1, '2026-09-03', 'Entrada', 34, 'PEDIDO-1003')
+VALUES (1, '2026-09-03', 'Entrada', 34, 'PEDIDO-1003')
 
-delete from inventario.Productos where ProductoID = 1;
+DELETE
+FROM inventario.MovimientosInventario
+WHERE Referencia = 'PEDIDO-1003';
 
 REVERT;
 
 -- Consulta Remota (mssql-lab)
+USE TechNova_Bodega;
 
+EXECUTE AS USER = 'ConsultaRemota';
+
+SELECT *
+FROM inventario.Productos;
+
+INSERT INTO inventario.Productos
+    (NombreProducto, Categoria, PrecioVenta, Stock, StockMinimo)
+VALUES ('Lenovo Thinkpad T14 gen 2', 'Computadoras', 600, 40, 10)
+
+REVERT;
 
 -- ==============================================
 -- === 8. Configuración del servidor enlazado ===
 -- ==============================================
+USE master;
+
+SELECT CONNECTIONPROPERTY('local_net_address')  AS ServerIP,
+       CONNECTIONPROPERTY('local_tcp_port')     AS ServerPort,
+       CONNECTIONPROPERTY('client_net_address') AS ClientIP;
+
+IF EXISTS
+    (SELECT 1
+     FROM sys.servers
+     WHERE name = N'SERVIDOR_BODEGA')
+    BEGIN
+        EXEC master.dbo.sp_dropserver
+             @server = N'SERVIDOR_BODEGA',
+             @droplogins = N'droplogins';
+    END
+
+
+EXEC master.dbo.sp_addlinkedserver
+     @server = N'SERVIDOR_BODEGA',
+     @srvproduct = N'',
+     @provider = N'MSOLEDBSQL',
+     @datasrc = N'mssql-lab,1433',
+     @provstr = N'Encrypt=Optional;TrustServerCertificate=Yes;User ID=Consulta_Remota;UID=Consulta_Remota',
+     @catalog = N'TechNova_Bodega';
+
+EXEC master.dbo.sp_addlinkedsrvlogin
+     @rmtsrvname = N'SERVIDOR_BODEGA',
+     @useself = N'False',
+     @locallogin = 'Operador_Ventas',
+     @rmtuser = N'Consulta_Remota',
+     @rmtpassword = N'RemoteQuery2350@';
+
+EXEC master.dbo.sp_droplinkedsrvlogin
+     @rmtsrvname = N'SERVIDOR_BODEGA',
+     @locallogin = NULL;
+
+-- Probar conexión con el servidor
+EXEC master.dbo.sp_testlinkedserver N'SERVIDOR_BODEGA';
+
+
+-- Verificar logins
+SELECT s.name                  AS Servidor,
+       sp.name                 AS LoginLocal,
+       ll.remote_name          AS LoginRemoto,
+       ll.uses_self_credential AS UsaCredencialesPropias
+FROM sys.linked_logins AS ll
+         INNER JOIN sys.servers AS s
+                    ON ll.server_id = s.server_id
+         LEFT JOIN sys.server_principals AS sp
+                   ON ll.local_principal_id = sp.principal_id
+WHERE s.name = N'SERVIDOR_BODEGA';
+
+
+-- Verificar datos del servidor
+SELECT name        AS SERVIDOR_ENLAZADO,
+       provider    AS PROVEEDOR,
+       data_source AS ORIGEN,
+       catalog     AS BASE_REMOTA
+FROM sys.servers
+WHERE name = N'SERVIDOR_BODEGA';
+
 
 
 -- ======================================================
 -- === 9. Consulta distribuida de pedidos y productos ===
 -- ======================================================
+USE TechNova_Central;
+SELECT SUSER_SNAME() AS LoginActual,
+       USER_NAME()   AS UsuarioActual,
+       DB_NAME()     AS BaseDatosActual;
 
+
+WITH ProductosBodega AS
+         (SELECT ProductoID,
+                 NombreProducto,
+                 PrecioVenta,
+                 Stock,
+                 StockMinimo
+          FROM [SERVIDOR_BODEGA].[TechNova_Bodega].[inventario].[Productos])
+SELECT P.PedidoID,
+       P.FechaPedido,
+       C.RazonSocial,
+       PR.NombreProducto,
+       D.Cantidad,
+       D.PrecioUnitario,
+       D.Cantidad * D.PrecioUnitario AS Subtotal
+FROM ventas.Pedidos AS P
+         INNER JOIN comercial.Clientes AS C
+                    ON C.ClienteID = P.ClienteID
+         INNER JOIN ventas.DetallePedido AS D
+                    ON D.PedidoID = P.PedidoID
+         INNER JOIN ProductosBodega AS PR
+                    ON PR.ProductoID = D.ProductoID
+ORDER BY P.PedidoID,
+         D.DetalleID;
+
+-- UNION ALL complementario: unifica en un mismo reporte líneas de pedidos
+-- locales y productos críticos remotos. No sustituye al JOIN anterior.
+SELECT TipoRegistro,
+       Identificador,
+       FechaRegistro,
+       Descripcion,
+       Cantidad,
+       PrecioUnitario,
+       Subtotal
+FROM (SELECT N'PEDIDO'                                              AS TipoRegistro,
+             CONVERT(NVARCHAR(20), P.PedidoID)                      AS Identificador,
+             P.FechaPedido                                          AS FechaRegistro,
+             C.RazonSocial + N' / ' + PR.NombreProducto             AS Descripcion,
+             D.Cantidad,
+             D.PrecioUnitario,
+             CONVERT(DECIMAL(12, 2), D.Cantidad * D.PrecioUnitario) AS Subtotal
+      FROM ventas.Pedidos AS P
+               INNER JOIN comercial.Clientes AS C
+                          ON C.ClienteID = P.ClienteID
+               INNER JOIN ventas.DetallePedido AS D
+                          ON D.PedidoID = P.PedidoID
+               INNER JOIN [SERVIDOR_BODEGA].[TechNova_Bodega].[inventario].[Productos] AS PR
+                          ON PR.ProductoID = D.ProductoID
+      UNION ALL
+      SELECT N'INVENTARIO_CRITICO',
+             CONVERT(NVARCHAR(20), PR.ProductoID),
+             CONVERT(DATE, NULL),
+             PR.NombreProducto,
+             PR.Stock,
+             PR.PrecioVenta,
+             CONVERT(DECIMAL(12, 2), NULL)
+      FROM [SERVIDOR_BODEGA].[TechNova_Bodega].[inventario].[Productos] AS PR
+      WHERE PR.Stock <= PR.StockMinimo
+        AND PR.Activo = 1) AS ResumenUnificado
+ORDER BY TipoRegistro,
+         Identificador;
 
 -- ==========================================
 -- === 10. Consulta de inventario crítico ===
 -- ==========================================
+
+-- Productos con stock mínimo y por debajo.
+SELECT ProductoID,
+       NombreProducto,
+       Categoria,
+       PrecioVenta,
+       Stock,
+       StockMinimo,
+       StockMinimo - Stock AS UnidadesPorReponer
+FROM [SERVIDOR_BODEGA].[TechNova_Bodega].[inventario].[Productos]
+WHERE Stock <= StockMinimo
+  AND Activo = 1
+ORDER BY UnidadesPorReponer DESC,
+         ProductoID;
 
 
 -- =========================================
 -- === 11. Abstracción mediante sinónimo ===
 -- =========================================
 
+USE master;
+
+
+IF DB_ID(N'TechNova_Sinonimos') IS NULL
+CREATE DATABASE TechNova_Sinonimos;
+
+USE TechNova_Sinonimos;
+
+IF NOT EXISTS
+    (SELECT 1
+     FROM sys.schemas
+     WHERE name = N'reportes')
+    EXEC (N'CREATE SCHEMA reportes AUTHORIZATION dbo');
+
+IF NOT EXISTS
+    (SELECT 1
+     FROM sys.database_principals
+     WHERE name = N'OperadorVentas')
+CREATE USER OperadorVentas FOR LOGIN Operador_Ventas;
+
+IF OBJECT_ID(N'reportes.ProductosBodega', N'SN') IS NULL
+    EXEC (N'CREATE SYNONYM [reportes].[ProductosBodega]
+          FOR [SERVIDOR_BODEGA].[TechNova_Bodega].[inventario].[Productos]');
+
+GRANT SELECT ON OBJECT::[reportes].[ProductosBodega] TO OperadorVentas;
+
+-- Referencia directa de cuatro partes.
+USE TechNova_Central;
+
+SELECT TOP (5) ProductoID,
+               NombreProducto,
+               Stock,
+               StockMinimo
+FROM [SERVIDOR_BODEGA].[TechNova_Bodega].[inventario].[Productos]
+ORDER BY ProductoID;
+
+-- La misma consulta utilizando el sinónimo.
+USE TechNova_Sinonimos
+
+SELECT TOP (5) ProductoID,
+               NombreProducto,
+               Stock,
+               StockMinimo
+FROM [reportes].[ProductosBodega]
+ORDER BY ProductoID;
+
 
 -- =====================================================
 -- === 12. Verificación de integridad y recuperación ===
 -- =====================================================
-
