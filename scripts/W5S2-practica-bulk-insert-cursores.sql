@@ -420,19 +420,3 @@ SELECT *
 FROM dbo.COMPARATIVO_CONSUMO_DIARIO
 ORDER BY DIA;
 
--- =============================
--- === 1. Parte distribuida ===
--- =============================
--- Ejecutar únicamente después de crear el Linked Server
--- SRV_UAM_DISTRIBUIDO en la instancia mssql-dev.
-
-
-USE master;
-
-SELECT name,
-       data_source,
-       is_linked
-FROM master.sys.servers;
-
-EXEC master.dbo.sp_testlinkedserver
-     N'SRV_UAM_DISTRIBUIDO';
