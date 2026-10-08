@@ -1,35 +1,141 @@
 /*******************************************************************************
- UNIVERSIDAD AMERICANA (UAM)
- FACULTAD DE INGENIERÍA Y ARQUITECTURA
- CARRERA DE INGENIERÍA EN SISTEMAS DE INFORMACIÓN
- 
- ASIGNATURA: Administración y Gestión de Bases de Datos (SIS0211)
- UNIDAD III: Documentación Técnica y Trazabilidad de Bases de Datos (RAAE3)
- SESIÓN 15: Extracción Automatizada de Metadatos y Vistas de Catálogo (sys.*)
- CASO DE ESTUDIO: Consumo de Trafico Movil y Servidores Enlazados
-
+ UNIVERSIDAD AMERICANA (UAM) - ADMINISTRACIÓN Y GESTIÓN DE BASES DE DATOS
+ Sesión 15: Extracción Automatizada de Metadatos y Diccionario de Datos
+ Caso de Estudio: Práctica Guiada de Bases de Datos Distribuidas (Ventas Norte y Ventas Sur)
+ Indicadores de Logro: ILE3.1, ILE3.2 (RAAE3) | ILE2.1, ILE2.2 (RAAE2)
 *******************************************************************************/
 
-USE BD_REGION_1; -- Instancia / Base de Datos Central
+SET NOCOUNT ON;
 GO
 
-
 -- ============================================================================
--- SCRIPT 1: DICCIONARIO DE DATOS AUTOMATIZADO CON PROPIEDADES EXTENDIDAS
+-- SECCIÓN 1: ASIGNACIÓN DE PROPIEDADES EXTENDIDAS (MS_Description)
+-- Documentación embebida directamente en el gestor para Ventas_Norte y Ventas_Sur
 -- ============================================================================
--- Extrae la estructura física, tipos de datos, longitud, nulabilidad y 
--- descripciones de negocio (MS_Description) de las tablas de consumo.
 
-PRINT '>>> EJECUTANDO SCRIPT 1: DICCIONARIO DE DATOS AUTOMATIZADO...';
+-- 1.1 Documentar tablas y columnas en Ventas_Norte
+USE Ventas_Norte;
 GO
 
-SELECT t.name                                                         AS [Tabla_Local],
-       c.column_id                                                    AS [Orden],
-       c.name                                                         AS [Columna],
-       ty.name                                                        AS [Tipo_Dato],
-       c.max_length                                                   AS [Longitud_Bytes],
-       CASE WHEN c.is_nullable = 1 THEN 'SÍ' ELSE 'NO' END            AS [Permite_Nulos],
-       ISNULL(CAST(ep.value AS VARCHAR(250)), '⚠️ Sin documentación') AS [Descripcion_Negocio]
+-- Tabla Clientes
+EXEC sys.sp_addextendedproperty
+     @name = N'MS_Description',
+     @value = N'Catálogo de clientes atendidos por la Sucursal Norte.',
+     @level0type = N'SCHEMA', @level0name = N'dbo',
+     @level1type = N'TABLE', @level1name = N'Clientes';
+
+EXEC sys.sp_addextendedproperty
+     @name = N'MS_Description',
+     @value = N'Identificador único del cliente en la sucursal.',
+     @level0type = N'SCHEMA', @level0name = N'dbo',
+     @level1type = N'TABLE', @level1name = N'Clientes',
+     @level2type = N'COLUMN', @level2name = N'IdCliente';
+
+EXEC sys.sp_addextendedproperty
+     @name = N'MS_Description',
+     @value = N'Ciudad de residencia del cliente (utilizada para análisis de fragmentación geográfica).',
+     @level0type = N'SCHEMA', @level0name = N'dbo',
+     @level1type = N'TABLE', @level1name = N'Clientes',
+     @level2type = N'COLUMN', @level2name = N'Ciudad';
+
+-- Tabla Ventas
+EXEC sys.sp_addextendedproperty
+     @name = N'MS_Description',
+     @value = N'Registro transaccional de ventas realizadas en la Sucursal Norte.',
+     @level0type = N'SCHEMA', @level0name = N'dbo',
+     @level1type = N'TABLE', @level1name = N'Ventas';
+
+EXEC sys.sp_addextendedproperty
+     @name = N'MS_Description',
+     @value = N'Fecha de emisión de la venta.',
+     @level0type = N'SCHEMA', @level0name = N'dbo',
+     @level1type = N'TABLE', @level1name = N'Ventas',
+     @level2type = N'COLUMN', @level2name = N'Fecha';
+GO
+
+-- 1.2 Documentar Sinónimos para la Sucursal Sur (en caso de Servidor Enlazado o BD Remota)
+IF OBJECT_ID(N'dbo.syn_VentasSur', N'SN') IS NOT NULL
+    BEGIN
+        EXEC sys.sp_addextendedproperty
+             @name = N'MS_Description',
+             @value = N'Sinónimo/Alias local que apunta a la tabla Ventas de la base de datos remota Ventas_Sur.',
+             @level0type = N'SCHEMA', @level0name = N'dbo',
+             @level1type = N'SYNONYM', @level1name = N'syn_VentasSur';
+    END;
+GO
+
+-- Comprobar extended properties
+SELECT *
+FROM sys.extended_properties;
+
+--Comprobar servidores
+SELECT *
+FROM sys.servers;
+
+
+
+-- Crear Servidor enlazado
+USE master;
+
+IF NOT EXISTS (SELECT 1
+               FROM sys.servers
+               WHERE name = N'SERVIDOR_VENTAS_SUR')
+    BEGIN
+
+        EXEC master.dbo.sp_addlinkedserver
+             @server = N'SERVIDOR_VENTAS_SUR',
+             @srvproduct = N'',
+             @provider = N'MSOLEDBSQL',
+             @datasrc = N'mssql-lab,1433',
+             @provstr = N'Encrypt=Optional;TrustServerCertificate=Yes',
+             @catalog = N'Ventas_Sur';
+    END;
+
+-- añadir sa como login remoto
+IF NOT EXISTS (SELECT 1
+               FROM sys.linked_logins AS ll
+                        INNER JOIN sys.servers AS s
+                                   ON s.server_id = ll.server_id
+               WHERE s.name = N'SERVIDOR_VENTAS_SUR'
+                 AND ll.local_principal_id = SUSER_ID('sa'))
+    BEGIN
+        EXEC master.dbo.sp_addlinkedsrvlogin
+             @rmtsrvname = N'SERVIDOR_VENTAS_SUR',
+             @useself = N'False',
+             @locallogin = 'sa',
+             @rmtuser = N'sa',
+             @rmtpassword = N'BasesDeDatos!2026';
+    END;
+
+-- test del servidor
+EXEC master.dbo.sp_testlinkedserver N'SERVIDOR_VENTAS_SUR';
+
+
+-- Crear sinónimo
+IF OBJECT_ID(N'dbo.syn_VentasSur', N'SN') IS NOT NULL
+    DROP SYNONYM dbo.syn_VentasSur;
+GO
+
+CREATE SYNONYM dbo.syn_VentasSur
+    FOR [SERVIDOR_VENTAS_SUR].[Ventas_Sur].[dbo].[Ventas];
+GO
+
+-- ============================================================================
+-- SECCIÓN 2: DICCIONARIO DE DATOS AUTOMATIZADO CON VISTAS DE CATÁLOGO (sys.*)
+-- Genera el reporte físico de campos, tipos, nulos y descripciones de negocio
+-- ============================================================================
+
+USE Ventas_Norte;
+GO
+
+SELECT DB_NAME()                                                             AS [Base_Datos],
+       t.name                                                                AS [Tabla],
+       c.column_id                                                           AS [Orden],
+       c.name                                                                AS [Columna],
+       ty.name                                                               AS [Tipo_Dato],
+       c.max_length                                                          AS [Longitud_Bytes],
+       CASE WHEN c.is_nullable = 1 THEN 'SÍ' ELSE 'NO' END                   AS [Permite_Nulos],
+       ISNULL(CAST(ep.value AS VARCHAR(250)), '⚠️ Sin descripción asignada') AS [Descripcion_Negocio]
 FROM sys.tables t
          INNER JOIN sys.columns c
                     ON t.object_id = c.object_id
@@ -39,21 +145,16 @@ FROM sys.tables t
                    ON ep.major_id = c.object_id
                        AND ep.minor_id = c.column_id
                        AND ep.name = 'MS_Description'
-WHERE t.name IN ('CONSUMO_REGIONAL', 'ANTENAS_UNICAS')
+WHERE t.name IN ('Clientes', 'Productos', 'Ventas')
 ORDER BY t.name, c.column_id;
 GO
 
-
 -- ============================================================================
--- SCRIPT 2: AUDITORÍA DE SERVIDORES ENLAZADOS Y SINÓNIMOS DISTRIBUIDOS
+-- SECCIÓN 3: AUDITORÍA DE INFRAESTRUCTURA DISTRIBUIDA (Linked Servers y Sinónimos)
+-- Permite inspeccionar conexiones externas y la abstracción de objetos remotos
 -- ============================================================================
--- Permite auditar desde el catálogo del gestor la infraestructura de conexión 
--- externa (sys.servers) y la abstracción de objetos remotos (sys.synonyms).
 
-PRINT '>>> EJECUTANDO SCRIPT 2: AUDITORÍA DE SERVIDORES ENLAZADOS Y SINÓNIMOS...';
-GO
-
--- 2.1. Consultar Servidores Enlazados Registrados en el SGBD
+-- 3.1 Auditar Servidores Enlazados Registrados en la Instancia
 SELECT server_id   AS [ID_Servidor],
        name        AS [Nombre_Servidor_Enlazado],
        product     AS [Producto],
@@ -65,126 +166,38 @@ FROM sys.servers
 WHERE is_linked = 1;
 GO
 
--- 2.2. Consultar Sinónimos y sus Rutas de Abstracción Remota
+-- 3.2 Auditar Sinónimos Configurados para Ventas Distribuidas
 SELECT s.name             AS [Sinonimo_Local],
-       s.base_object_name AS [Objeto_Remoto_4_Partes],
+       s.base_object_name AS [Objeto_Remoto_Referenciado],
        s.create_date      AS [Fecha_Creacion]
 FROM sys.synonyms s;
 GO
 
--- Crear sinónimo
-IF OBJECT_ID(N'dbo.syn_REGION_3', N'SN') IS NOT NULL
-    DROP SYNONYM dbo.syn_REGION_3;
-GO
-
-CREATE SYNONYM dbo.syn_REGION_3
-    FOR [SERVIDOR_REGION3].[BD_REGION_3].[dbo].[CONSUMO_REGIONAL];
-GO
-
-
 -- ============================================================================
--- SCRIPT 3: TRAZABILIDAD Y MAPEO DE DEPENDENCIAS (sys.sql_expression_dependencies)
+-- SECCIÓN 4: ANÁLISIS DE IMPACTO Y MAPEO DE DEPENDENCIAS DE OBJETOS
+-- Examina vistas globales o procedimientos que consumen fragmentos de ventas
 -- ============================================================================
--- Inspecciona qué vistas globales (vw_ConsumoNacional) o procedimientos almacenados
--- dependen de las tablas locales o remotas antes de aplicar cambios de esquema.
 
-PRINT '>>> EJECUTANDO SCRIPT 3: ANÁLISIS DE IMPACTO Y DEPENDENCIAS...';
+-- Ejemplo: Creación de Vista Global Consolidada si no existe
+USE Ventas_Norte;
 GO
 
-SELECT o.name                                        AS [Objeto_Consumidor],
+CREATE OR ALTER VIEW dbo.VW_VentasGlobales AS
+SELECT IdVenta, Fecha, IdCliente, 'Norte' AS Sucursal
+FROM Ventas_Norte.dbo.Ventas
+UNION ALL
+SELECT IdVenta, Fecha, IdCliente, 'Sur' AS Sucursal
+FROM syn_VentasSur;
+GO
+
+-- Mapeo de dependencias utilizando sys.sql_expression_dependencies
+SELECT o.name                                        AS [Objeto_Consumidor_Global],
        o.type_desc                                   AS [Tipo_Objeto],
-       d.referenced_entity_name                      AS [Entidad_Referenciada_Dependiente],
+       d.referenced_entity_name                      AS [Tabla_Referenciada_Dependiente],
        ISNULL(d.referenced_database_name, DB_NAME()) AS [Base_Datos_Destino]
 FROM sys.sql_expression_dependencies d
          INNER JOIN sys.objects o
                     ON d.referencing_id = o.object_id
-WHERE d.referenced_entity_name LIKE '%CONSUMO%'
-   OR o.name LIKE '%VW_CONSUMO%'
-ORDER BY o.name;
+WHERE o.name = 'VW_VentasGlobales'
+   OR d.referenced_entity_name IN ('Ventas', 'Clientes', 'Productos');
 GO
-
-
-
--- ============================================================================
--- SCRIPT 4: ASIGNACIÓN DE PROPIEDADES EXTENDIDAS (MS_Description) EN DATOS DISTRIBUIDOS
--- ============================================================================
--- Asigna directamente en el motor el propósito de negocio de la fragmentación 
--- regional y las columnas clave de consumo.
-
-PRINT '>>> EJECUTANDO SCRIPT 4: DOCUMENTACIÓN DE PROPIEDADES EXTENDIDAS...';
-GO
-
--- 4.1. Documentar la Tabla Transaccional de Consumo
-IF EXISTS (SELECT 1
-           FROM sys.tables
-           WHERE name = 'CONSUMO_REGIONAL')
-    BEGIN
-        -- Eliminar propiedad si ya existe para evitar duplicados
-        IF EXISTS (SELECT 1
-                   FROM sys.extended_properties
-                   WHERE major_id = OBJECT_ID('CONSUMO_REGIONAL')
-                     AND minor_id = 0
-                     AND name = 'MS_Description')
-            BEGIN
-                EXEC sys.sp_dropextendedproperty
-                     @name = N'MS_Description',
-                     @level0type = N'SCHEMA', @level0name = N'dbo',
-                     @level1type = N'TABLE', @level1name = N'CONSUMO_REGIONAL';
-            END;
-
-        EXEC sys.sp_addextendedproperty
-             @name = N'MS_Description',
-             @value = N'Tabla transaccional fragmentada horizontalmente por zonas comerciales (Capital, Sur Oriente, etc.).',
-             @level0type = N'SCHEMA', @level0name = N'dbo',
-             @level1type = N'TABLE', @level1name = N'CONSUMO_REGIONAL';
-
-        -- Documentar columna MB (Tráfico de Datos)
-        IF EXISTS (SELECT 1
-                   FROM sys.extended_properties
-                   WHERE major_id = OBJECT_ID('CONSUMO_REGIONAL')
-                     AND minor_id = COLUMNPROPERTY(OBJECT_ID('CONSUMO_REGIONAL'), 'MB', 'ColumnId')
-                     AND name = 'MS_Description')
-            BEGIN
-                EXEC sys.sp_dropextendedproperty
-                     @name = N'MS_Description',
-                     @level0type = N'SCHEMA', @level0name = N'dbo',
-                     @level1type = N'TABLE', @level1name = N'CONSUMO_REGIONAL',
-                     @level2type = N'COLUMN', @level2name = N'MB';
-            END;
-
-        EXEC sys.sp_addextendedproperty
-             @name = N'MS_Description',
-             @value = N'Tráfico de datos consumido en Megabytes (MB) en el periodo registrado.',
-             @level0type = N'SCHEMA', @level0name = N'dbo',
-             @level1type = N'TABLE', @level1name = N'CONSUMO_REGIONAL',
-             @level2type = N'COLUMN', @level2name = N'MB';
-
-        -- Documentar columna INGRESO (Monto Facturado)
-        IF EXISTS (SELECT 1
-                   FROM sys.extended_properties
-                   WHERE major_id = OBJECT_ID('CONSUMO_REGIONAL')
-                     AND minor_id = COLUMNPROPERTY(OBJECT_ID('CONSUMO_REGIONAL'), 'INGRESO', 'ColumnId')
-                     AND name = 'MS_Description')
-            BEGIN
-                EXEC sys.sp_dropextendedproperty
-                     @name = N'MS_Description',
-                     @level0type = N'SCHEMA', @level0name = N'dbo',
-                     @level1type = N'TABLE', @level1name = N'CONSUMO_REGIONAL',
-                     @level2type = N'COLUMN', @level2name = N'INGRESO';
-            END;
-
-        EXEC sys.sp_addextendedproperty
-             @name = N'MS_Description',
-             @value = N'Monto facturado en córdobas por el uso de servicios de voz, datos y eventos.',
-             @level0type = N'SCHEMA', @level0name = N'dbo',
-             @level1type = N'TABLE', @level1name = N'CONSUMO_REGIONAL',
-             @level2type = N'COLUMN', @level2name = N'INGRESO';
-    END;
-GO
-
-PRINT '>>> TODOS LOS SCRIPTS DE LA SESIÓN 15 FUERON COMPILADOS EXITOSAMENTE.';
-GO
-
--- comprobar las descripciones
-SELECT *
-FROM sys.extended_properties;
