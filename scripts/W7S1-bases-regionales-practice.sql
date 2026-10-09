@@ -260,7 +260,7 @@ IF IS_ROLEMEMBER(N'db_datawriter', N'UsuarioRegion3') <> 1
     END;
 
 
--- SERVIDOR ENLAZADO (mssql-dev)
+-- SERVIDOR ENLAZADO (mssql-dev) de BD_REGION_3
 USE master;
 
 -- Crear Servidor enlazado
@@ -345,7 +345,7 @@ FROM dbo.CONSUMO_ABONADOS C
 WHERE A.ZONA IN ('OCCIDENTE', 'ZONA NORTE');
 
 -- mssql-lab
-TRUNCATE TABLE BD_REGION_3.dbo.CONSUMO_REGIONAL;
+TRUNCATE TABLE syn_REGION_3;
 
 -- Ejecutar en master en mssql-dev luego del truncate table de mssql-lab
 USE master;
@@ -380,9 +380,9 @@ INNER JOIN Practica_Bulk_Cursores.dbo.ANTENAS_UNICAS AS A
     ON C.ANTENA = A.ID_SITIO
 WHERE A.ZONA IN ('ZONA CENTRO', 'REGIONES AUTONOMAS');
 
--- ==================
--- === Validación ===
--- ==================
+-- =====================
+-- === 7. Validación ===
+-- =====================
 use Practica_Bulk_Cursores;
 
 SELECT 'CENTRAL_CON_MAPEO_VALIDO'     AS ORIGEN,
@@ -411,9 +411,9 @@ FROM (SELECT EVENTOS, MB, MINUTOS, INGRESO
       SELECT EVENTOS, MB, MINUTOS, INGRESO
       FROM [SERVIDOR_REGION3].[BD_REGION_3].[dbo].[CONSUMO_REGIONAL]) D;
 
--- =============================
--- === Reconstrucción Global ===
--- =============================
+-- ================================
+-- === 8. Reconstrucción Global ===
+-- ================================
 
 SELECT 'NODO 1' AS NODO,
        ABONADO,
@@ -460,10 +460,11 @@ FROM [SERVIDOR_REGION3].[BD_REGION_3].[dbo].[CONSUMO_REGIONAL];
 
 -- CORREGIR LUEGO
 
+-- ============================================
+-- === 9. Consultas analíticas distribuidas ===
+-- ============================================
 
-/*==============================================================================
- 9. CONSULTAS ANALÍTICAS DISTRIBUIDAS
-==============================================================================*/
+
 WITH GLOBAL AS (SELECT *
                 FROM BD_REGION_1.dbo.CONSUMO_REGIONAL
                 UNION ALL
@@ -471,7 +472,7 @@ WITH GLOBAL AS (SELECT *
                 FROM BD_REGION_2.dbo.CONSUMO_REGIONAL
                 UNION ALL
                 SELECT *
-                FROM BD_REGION_3.dbo.CONSUMO_REGIONAL)
+                FROM syn_REGION_3)
 SELECT ZONA, SUM(INGRESO) AS INGRESO_TOTAL
 FROM GLOBAL
 GROUP BY ZONA
@@ -485,7 +486,7 @@ WITH GLOBAL AS (SELECT *
                 FROM BD_REGION_2.dbo.CONSUMO_REGIONAL
                 UNION ALL
                 SELECT *
-                FROM BD_REGION_3.dbo.CONSUMO_REGIONAL)
+                FROM syn_REGION_3)
 SELECT ZONA, SUM(MB) AS MB_TOTAL, SUM(MINUTOS) AS MINUTOS_TOTAL
 FROM GLOBAL
 GROUP BY ZONA
@@ -499,7 +500,7 @@ WITH GLOBAL AS (SELECT *
                 FROM BD_REGION_2.dbo.CONSUMO_REGIONAL
                 UNION ALL
                 SELECT *
-                FROM BD_REGION_3.dbo.CONSUMO_REGIONAL)
+                FROM syn_REGION_3)
 SELECT ZONA, COUNT(DISTINCT ABONADO) AS ABONADOS_DISTINTOS
 FROM GLOBAL
 GROUP BY ZONA
@@ -513,7 +514,7 @@ WITH GLOBAL AS (SELECT *
                 FROM BD_REGION_2.dbo.CONSUMO_REGIONAL
                 UNION ALL
                 SELECT *
-                FROM BD_REGION_3.dbo.CONSUMO_REGIONAL)
+                FROM syn_REGION_3)
 SELECT DIA / 100    AS MES,
        ZONA,
        SUM(MB)      AS MB_TOTAL,
@@ -531,7 +532,7 @@ WITH GLOBAL AS (SELECT *
                 FROM BD_REGION_2.dbo.CONSUMO_REGIONAL
                 UNION ALL
                 SELECT *
-                FROM BD_REGION_3.dbo.CONSUMO_REGIONAL)
+                FROM syn_REGION_3)
 SELECT TOP (10) ANTENA,
                 SUM(INGRESO) AS INGRESO_TOTAL
 FROM GLOBAL
@@ -546,7 +547,7 @@ WITH GLOBAL AS (SELECT *
                 FROM BD_REGION_2.dbo.CONSUMO_REGIONAL
                 UNION ALL
                 SELECT *
-                FROM BD_REGION_3.dbo.CONSUMO_REGIONAL)
+                FROM syn_REGION_3)
 SELECT TOP (10) ABONADO,
                 SUM(MB) AS MB_TOTAL
 FROM GLOBAL
@@ -561,7 +562,7 @@ WITH GLOBAL AS (SELECT *
                 FROM BD_REGION_2.dbo.CONSUMO_REGIONAL
                 UNION ALL
                 SELECT *
-                FROM BD_REGION_3.dbo.CONSUMO_REGIONAL)
+                FROM syn_REGION_3)
 SELECT ZONA, LNEGOCIO, SUM(CAST(EVENTOS AS BIGINT)) AS EVENTOS_TOTAL
 FROM GLOBAL
 GROUP BY ZONA, LNEGOCIO
@@ -575,17 +576,13 @@ SELECT 'NODO 2', SUM(INGRESO)
 FROM BD_REGION_2.dbo.CONSUMO_REGIONAL
 UNION ALL
 SELECT 'NODO 3', SUM(INGRESO)
-FROM BD_REGION_3.dbo.CONSUMO_REGIONAL;
+FROM syn_REGION_3;
 GO
 
-/*==============================================================================
- 10. VISTA GLOBAL
- Debe crearse en la base CENTRAL. CREATE OR ALTER VIEW debe ser la primera
- sentencia de su batch; por eso USE y GO deben ejecutarse antes.
- REEMPLACE BD_CENTRAL por el nombre real y DESCOMENTE:
-==============================================================================*/
--- USE BD_CENTRAL;
--- GO
+-- =======================
+-- === 10. Vista gloal ===
+-- =======================
+
 CREATE OR ALTER VIEW dbo.VW_CONSUMO_NACIONAL
 AS
 SELECT ABONADO,
@@ -625,7 +622,7 @@ SELECT ABONADO,
        MB,
        MINUTOS,
        INGRESO
-FROM BD_REGION_3.dbo.CONSUMO_REGIONAL;
+FROM syn_REGION_3;
 GO
 
 SELECT ZONA, SUM(INGRESO) AS INGRESO_TOTAL
@@ -643,25 +640,51 @@ GROUP BY ABONADO
 ORDER BY INGRESO_TOTAL DESC;
 GO
 
-/*==============================================================================
- 11. LINKED SERVER - EJEMPLOS DE SINTAXIS
- Reemplazar SERVIDOR_REGION_X por el nombre real del Linked Server.
-==============================================================================*/
--- Nombre de cuatro partes:
--- SELECT *
--- FROM [SERVIDOR_REGION_1].[BD_REGION_1].[dbo].[CONSUMO_REGIONAL];
+-- ========================================================
+-- === 11. Linked servers de las otras regiones (2 y 1) ===
+-- ========================================================
 
--- OPENQUERY:
--- SELECT *
--- FROM OPENQUERY([SERVIDOR_REGION_1],
---   'SELECT ZONA, SUM(INGRESO) AS INGRESO_TOTAL
---    FROM BD_REGION_1.dbo.CONSUMO_REGIONAL
---    GROUP BY ZONA');
-GO
+-- SERVIDOR ENLAZADO (mssql-lab) de BD_REGION_1 y BD_REGION_2
+USE master;
 
-/*==============================================================================
- 12. RETO FINAL
-==============================================================================*/
+-- Crear Servidor enlazado
+IF NOT EXISTS (SELECT 1
+               FROM sys.servers
+               WHERE name = N'SERVIDOR_REGION3')
+    BEGIN
+
+        EXEC master.dbo.sp_addlinkedserver
+             @server = N'SERVIDOR_REGION3',
+             @srvproduct = N'',
+             @provider = N'MSOLEDBSQL',
+             @datasrc = N'mssql-lab,1433',
+             @provstr = N'Encrypt=Optional;TrustServerCertificate=Yes;User ID=LoginRegion3;UID=LoginRegion3',
+             @catalog = N'BD_REGION_3';
+    END;
+
+-- añadir LoginRegion3 como login remoto del servidor
+IF NOT EXISTS (SELECT 1
+               FROM sys.linked_logins AS ll
+                        INNER JOIN sys.servers AS s
+                                   ON s.server_id = ll.server_id
+               WHERE s.name = N'SERVIDOR_REGION3'
+                 AND ll.local_principal_id = SUSER_ID('sa'))
+    BEGIN
+        EXEC master.dbo.sp_addlinkedsrvlogin
+             @rmtsrvname = N'SERVIDOR_REGION3',
+             @useself = N'False',
+             @locallogin = 'sa',
+             @rmtuser = N'LoginRegion3',
+             @rmtpassword = N'BasesDeDatosRegion3!2026';
+    END;
+
+-- test del servidor
+EXEC master.dbo.sp_testlinkedserver N'SERVIDOR_REGION3';
+
+-- ======================
+-- === 12. Reto final ===
+-- ======================
+
 WITH GLOBAL AS (SELECT *
                 FROM BD_REGION_1.dbo.CONSUMO_REGIONAL
                 UNION ALL
@@ -669,7 +692,7 @@ WITH GLOBAL AS (SELECT *
                 FROM BD_REGION_2.dbo.CONSUMO_REGIONAL
                 UNION ALL
                 SELECT *
-                FROM BD_REGION_3.dbo.CONSUMO_REGIONAL)
+                FROM syn_REGION_3)
 SELECT DIA / 100                    AS MES,
        ZONA,
        COUNT(DISTINCT ABONADO)      AS ABONADOS_DISTINTOS,
