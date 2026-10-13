@@ -52,6 +52,7 @@ EXEC sys.sp_addextendedproperty
 GO
 
 -- comprobar extended properties
+USE BD_REGION_2;
 SELECT *
 FROM sys.extended_properties;
 
