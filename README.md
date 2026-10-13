@@ -2,7 +2,7 @@
 
 Repositorio personal de prácticas de administración, seguridad, recuperación, procesamiento y distribución de datos con Microsoft SQL Server.
 
-El repositorio contiene los scripts ejecutables. La documentación narrativa, las explicaciones paso a paso y las evidencias de ejecución se mantienen actualmente en las notas de Nexus y se incorporarán progresivamente aquí para conservar un respaldo reproducible del laboratorio.
+El repositorio contiene los scripts ejecutables. La documentación narrativa, las explicaciones paso a paso y las evidencias de ejecución se mantienen actualmente en las notas personales de Obsidian y se incorporarán progresivamente aquí para conservar un respaldo reproducible del laboratorio.
 
 ## Entorno de trabajo
 
