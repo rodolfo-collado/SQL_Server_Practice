@@ -34,7 +34,7 @@ BACKUP DATABASE LaboratorioBackup
 
 -- 6. Verificar el archivo de respaldo
 RESTORE VERIFYONLY
-    FROM DISK = '/var/opt/mssql/backup/LaboratorioBackup.bak';
+    FROM DISK = '/var/opt/mssql/backup/LaboratorioBackupPC.bak';
 
 -- 7. Simular la pérdida de información
 DELETE
@@ -50,7 +50,7 @@ ALTER DATABASE LaboratorioBackup
     SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
 RESTORE DATABASE LaboratorioBackup
-    FROM DISK = '/var/opt/mssql/backup/LaboratorioBackup.bak'
+    FROM DISK = '/var/opt/mssql/backup/LaboratorioBackupPC.bak'
     WITH REPLACE,
     STATS = 10;
 

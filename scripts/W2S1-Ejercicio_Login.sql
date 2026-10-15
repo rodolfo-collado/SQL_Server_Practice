@@ -123,12 +123,12 @@ CREATE TABLE Prueba2
 
 -- 5. Modificar una tabla
 
-ALTER TABLE Prueba
+ALTER TABLE Prueba2
     ADD Pais VARCHAR(50);
 
 -- 6. Eliminar una tabla
 
-DROP TABLE Prueba;
+DROP TABLE Prueba2;
 
 
 -- ===========================================

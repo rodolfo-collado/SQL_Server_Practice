@@ -16,10 +16,10 @@ SELECT CONNECTIONPROPERTY('local_net_address')  AS ServerIP,
 -- ==========================================================================
 
 -- 1. Creación del Login de puente remota
-USE master
+USE master;
 
 CREATE LOGIN [LoginRemoto_UAM]
-    WITH PASSWORD = 'PasswordSeguro123!',
+    WITH PASSWORD = 'Password3Seguro123!',
     CHECK_POLICY = ON;
 
 -- 2. Conexión a la base de datos objetivo
@@ -62,12 +62,22 @@ FROM dbo.Estudiantes;
 -- 1. Ejecución del proceso `sp_addlinkedserver` para conectar con la otra instancia
 USE master;
 
+IF EXISTS(SELECT 1
+          FROM sys.servers
+          WHERE name = 'SRV_UAM_DISTRIBUIDO')
+    BEGIN
+        EXEC master.dbo.sp_dropserver
+             @server = N'SRV_UAM_DISTRIBUIDO',
+             @droplogins = 'droplogins';
+    END
+
 EXEC master.dbo.sp_addlinkedserver
      @server = N'SRV_UAM_DISTRIBUIDO',
      @srvproduct = N'',
      @provider = N'MSOLEDBSQL',
      @datasrc = N'mssql-lab,1433',
-     @provstr = N'Encrypt=Optional';
+     @provstr = N'Encrypt=Optional;TrustServerCertificate=Yes;User ID=LoginRemoto_UAM;UID=LoginRemoto_UAM',
+     @catalog = N'BaseDatosDestino';
 
 -- =======================================================================
 -- === Fase 2: Configuración del mapeo de seguridad (origen | destino) ===
@@ -76,6 +86,8 @@ EXEC master.dbo.sp_addlinkedserver
 -- 1. Creación del login para mapeo de credenciales en la destino
 CREATE LOGIN EstudianteLocal
     WITH PASSWORD = 'LocalPassword123!';
+SELECT *
+FROM sys.sql_logins;
 
 -- 2. Ejecución del mapeo de credenciales
 EXEC master.dbo.sp_addlinkedsrvlogin
