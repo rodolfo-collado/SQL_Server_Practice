@@ -73,7 +73,6 @@ SELECT *
 FROM sys.servers;
 
 
-
 -- Crear Servidor enlazado
 USE master;
 
@@ -104,7 +103,7 @@ IF NOT EXISTS (SELECT 1
              @useself = N'False',
              @locallogin = 'sa',
              @rmtuser = N'sa',
-             @rmtpassword = N'BasesDeDatos!2026';
+             @rmtpassword = N'Sql2025SecurePass'; -- Rodolfo:BasesDeDatos!2026 || Gabriel:Sql2025SecurePass
     END;
 
 -- test del servidor
@@ -112,6 +111,8 @@ EXEC master.dbo.sp_testlinkedserver N'SERVIDOR_VENTAS_SUR';
 
 
 -- Crear sinónimo
+USE Ventas_Norte;
+
 IF OBJECT_ID(N'dbo.syn_VentasSur', N'SN') IS NOT NULL
     DROP SYNONYM dbo.syn_VentasSur;
 GO

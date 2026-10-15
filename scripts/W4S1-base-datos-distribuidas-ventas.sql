@@ -129,7 +129,7 @@ SELECT *
 FROM Ventas_Norte.dbo.Ventas
 UNION
 SELECT *
-FROM [SRV_UAM_DISTRIBUIDO].[Ventas_Sur].[dbo].[Ventas];
+FROM syn_VentasSur;
 
 
 -- 11. JOIN distribuido
@@ -144,8 +144,8 @@ FROM dbo.Ventas AS v
 UNION
 
 SELECT v.IdVenta, v.Fecha, c.Nombre
-FROM [SRV_UAM_DISTRIBUIDO].[Ventas_Sur].[dbo].[Ventas] AS v
-         JOIN [SRV_UAM_DISTRIBUIDO].[Ventas_Sur].[dbo].[Clientes] AS c
+FROM syn_VentasSur AS v
+         JOIN [SERVIDOR_VENTAS_SUR].[Ventas_Sur].[dbo].[Clientes] AS c
               ON v.IdCliente = c.IdCliente;
 
 -- 12. Consulta con filtro
@@ -159,6 +159,6 @@ FROM (SELECT *
       UNION
 
       SELECT *
-      FROM [SRV_UAM_DISTRIBUIDO].[Ventas_Sur].[dbo].[Ventas]) AS VentasGlobal
+      FROM [SERVIDOR_VENTAS_SUR].[Ventas_Sur].[dbo].[Ventas]) AS VentasGlobal
 WHERE Fecha > '2026-01-12';
 

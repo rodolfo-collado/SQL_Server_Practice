@@ -19,7 +19,7 @@ SELECT CONNECTIONPROPERTY('local_net_address')  AS ServerIP,
 USE master;
 
 CREATE LOGIN [LoginRemoto_UAM]
-    WITH PASSWORD = 'Password3Seguro123!',
+    WITH PASSWORD = 'PasswordSeguro123!',
     CHECK_POLICY = ON;
 
 -- 2. Conexión a la base de datos objetivo
@@ -72,35 +72,31 @@ IF EXISTS(SELECT 1
     END
 
 EXEC master.dbo.sp_addlinkedserver
-     @server = N'SRV_UAM_DISTRIBUIDO',
-     @srvproduct = N'',
-     @provider = N'MSOLEDBSQL',
-     @datasrc = N'mssql-lab,1433',
-     @provstr = N'Encrypt=Optional;TrustServerCertificate=Yes;User ID=LoginRemoto_UAM;UID=LoginRemoto_UAM',
-     @catalog = N'BaseDatosDestino';
+    @server = N'SRV_UAM_DISTRIBUIDO',
+    @srvproduct = N'',
+    @provider = N'MSOLEDBSQL',
+    @datasrc = N'mssql-lab,1433',
+    @provstr = N'Encrypt=Optional',
+    @catalog = N'BaseDatosDestino';
 
--- =======================================================================
--- === Fase 2: Configuración del mapeo de seguridad (origen | destino) ===
--- =======================================================================
+-- =============================================================
+-- === Fase 2: Configuración del mapeo de seguridad (origen) ===
+-- =============================================================
 
--- 1. Creación del login para mapeo de credenciales en la destino
-CREATE LOGIN EstudianteLocal
+-- 1. Creación del login para mapeo de credenciales en la origen
+IF SUSER_ID(N'EstudianteLocal') IS NULL
+BEGIN
+    CREATE LOGIN [EstudianteLocal]
     WITH PASSWORD = 'LocalPassword123!';
-SELECT *
-FROM sys.sql_logins;
+END;
 
 -- 2. Ejecución del mapeo de credenciales
 EXEC master.dbo.sp_addlinkedsrvlogin
-     @rmtsrvname = N'SRV_UAM_DISTRIBUIDO',
-     @useself = N'false',
-     @locallogin = N'EstudianteLocal',
-     @rmtuser = N'LoginRemoto_UAM',
-     @rmtpassword = N'PasswordSeguro123!';
-
--- (test) borrar servidor enlazado
-EXEC master.dbo.sp_dropserver
-     @server = N'SRV_UAM_DISTRIBUIDO',
-     @droplogins = 'droplogins';
+    @rmtsrvname = N'SRV_UAM_DISTRIBUIDO',
+    @useself = N'false',
+    @locallogin = N'EstudianteLocal',
+    @rmtuser = N'LoginRemoto_UAM',
+    @rmtpassword = N'PasswordSeguro123!';
 
 -- (test) Ver registro del servidor enlazado
 SELECT name,
