@@ -51,6 +51,13 @@ EXEC sys.sp_addextendedproperty
      @level2type = N'COLUMN', @level2name = N'OrderDate';
 GO
 
+EXEC sys.sp_updateextendedproperty
+     @name = N'MS_Description',
+     @value = N'Fecha y hora de emisión del pedido por parte del cliente. Actualizado el martes 13 de octubre',
+     @level0type = N'SCHEMA', @level0name = N'dbo',
+     @level1type = N'TABLE', @level1name = N'Orders',
+     @level2type = N'COLUMN', @level2name = N'OrderDate';
+
 -- comprobar extended properties
 USE BD_REGION_2;
 SELECT *
