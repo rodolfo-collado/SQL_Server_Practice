@@ -297,6 +297,15 @@ IF NOT EXISTS (SELECT 1
 -- test del servidor
 EXEC master.dbo.sp_testlinkedserver N'SERVIDOR_REGION3';
 
+-- Crear sinónimo del servidor en master
+USE BD_REGION_1;
+IF OBJECT_ID(N'dbo.syn_REGION_3', N'SN') IS NOT NULL
+    DROP SYNONYM dbo.syn_REGION_3;
+GO
+
+CREATE SYNONYM dbo.syn_REGION_3
+    FOR [SERVIDOR_REGION3].[BD_REGION_3].[dbo].[CONSUMO_REGIONAL];
+GO
 
 -- ===================================
 -- === 6. Fragmentación Horizontal ===
@@ -345,45 +354,50 @@ FROM dbo.CONSUMO_ABONADOS C
 WHERE A.ZONA IN ('OCCIDENTE', 'ZONA NORTE');
 
 -- mssql-lab
-TRUNCATE TABLE syn_REGION_3;
+USE BD_REGION_3;
+
+TRUNCATE TABLE dbo.CONSUMO_REGIONAL;
 
 -- Ejecutar en master en mssql-dev luego del truncate table de mssql-lab
 USE master;
+
+-- Brindar permisos de insert y select a UsuarioRegion3 (en caso de fallo en la detección del rol de datawriter)
+GRANT INSERT, SELECT
+    ON OBJECT::dbo.CONSUMO_REGIONAL
+    TO UsuarioRegion3;
+
 INSERT INTO [SERVIDOR_REGION3].[BD_REGION_3].[dbo].[CONSUMO_REGIONAL]
-(
-    ABONADO,
-    TRAMO,
-    LNEGOCIO,
-    SEGMENTO,
-    DIA,
-    ANTENA,
-    ZONA,
-    EVENTOS,
-    MB,
-    MINUTOS,
-    INGRESO
-)
-SELECT
-    C.ABONADO,
-    C.TRAMO,
-    C.LNEGOCIO,
-    C.SEGMENTO,
-    C.DIA,
-    C.ANTENA,
-    A.ZONA,
-    C.EVENTOS,
-    C.MB,
-    C.MINUTOS,
-    C.INGRESO
+(ABONADO,
+ TRAMO,
+ LNEGOCIO,
+ SEGMENTO,
+ DIA,
+ ANTENA,
+ ZONA,
+ EVENTOS,
+ MB,
+ MINUTOS,
+ INGRESO)
+SELECT C.ABONADO,
+       C.TRAMO,
+       C.LNEGOCIO,
+       C.SEGMENTO,
+       C.DIA,
+       C.ANTENA,
+       A.ZONA,
+       C.EVENTOS,
+       C.MB,
+       C.MINUTOS,
+       C.INGRESO
 FROM Practica_Bulk_Cursores.dbo.CONSUMO_ABONADOS AS C
-INNER JOIN Practica_Bulk_Cursores.dbo.ANTENAS_UNICAS AS A
-    ON C.ANTENA = A.ID_SITIO
+         INNER JOIN Practica_Bulk_Cursores.dbo.ANTENAS_UNICAS AS A
+                    ON C.ANTENA = A.ID_SITIO
 WHERE A.ZONA IN ('ZONA CENTRO', 'REGIONES AUTONOMAS');
 
 -- =====================
 -- === 7. Validación ===
 -- =====================
-use Practica_Bulk_Cursores;
+USE Practica_Bulk_Cursores;
 
 SELECT 'CENTRAL_CON_MAPEO_VALIDO'     AS ORIGEN,
        COUNT_BIG(*)                   AS REGISTROS,
@@ -456,9 +470,6 @@ SELECT 'NODO 3',
        MINUTOS,
        INGRESO
 FROM [SERVIDOR_REGION3].[BD_REGION_3].[dbo].[CONSUMO_REGIONAL];
-
-
--- CORREGIR LUEGO
 
 -- ============================================
 -- === 9. Consultas analíticas distribuidas ===
@@ -640,50 +651,10 @@ GROUP BY ABONADO
 ORDER BY INGRESO_TOTAL DESC;
 GO
 
--- ========================================================
--- === 11. Linked servers de las otras regiones (2 y 1) ===
--- ========================================================
-
--- SERVIDOR ENLAZADO (mssql-lab) de BD_REGION_1 y BD_REGION_2
+-- ======================
+-- === 11. Reto final ===
+-- ======================
 USE master;
-
--- Crear Servidor enlazado
-IF NOT EXISTS (SELECT 1
-               FROM sys.servers
-               WHERE name = N'SERVIDOR_REGION3')
-    BEGIN
-
-        EXEC master.dbo.sp_addlinkedserver
-             @server = N'SERVIDOR_REGION3',
-             @srvproduct = N'',
-             @provider = N'MSOLEDBSQL',
-             @datasrc = N'mssql-lab,1433',
-             @provstr = N'Encrypt=Optional;TrustServerCertificate=Yes;User ID=LoginRegion3;UID=LoginRegion3',
-             @catalog = N'BD_REGION_3';
-    END;
-
--- añadir LoginRegion3 como login remoto del servidor
-IF NOT EXISTS (SELECT 1
-               FROM sys.linked_logins AS ll
-                        INNER JOIN sys.servers AS s
-                                   ON s.server_id = ll.server_id
-               WHERE s.name = N'SERVIDOR_REGION3'
-                 AND ll.local_principal_id = SUSER_ID('sa'))
-    BEGIN
-        EXEC master.dbo.sp_addlinkedsrvlogin
-             @rmtsrvname = N'SERVIDOR_REGION3',
-             @useself = N'False',
-             @locallogin = 'sa',
-             @rmtuser = N'LoginRegion3',
-             @rmtpassword = N'BasesDeDatosRegion3!2026';
-    END;
-
--- test del servidor
-EXEC master.dbo.sp_testlinkedserver N'SERVIDOR_REGION3';
-
--- ======================
--- === 12. Reto final ===
--- ======================
 
 WITH GLOBAL AS (SELECT *
                 FROM BD_REGION_1.dbo.CONSUMO_REGIONAL

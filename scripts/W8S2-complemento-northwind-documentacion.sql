@@ -59,7 +59,6 @@ EXEC sys.sp_updateextendedproperty
      @level2type = N'COLUMN', @level2name = N'OrderDate';
 
 -- comprobar extended properties
-USE BD_REGION_2;
 SELECT *
 FROM sys.extended_properties;
 
@@ -86,7 +85,7 @@ GO
 
 EXEC sys.sp_updateextendedproperty
      @name = N'MS_Description',
-     @value = N'Ciudad principal de entrega para la orden de compra.',
+     @value = N'Ciudad principal de entrega para la orden de compra. Actualizado el martes 13 de octubre',
      @level0type = N'SCHEMA', @level0name = N'dbo',
      @level1type = N'TABLE', @level1name = N'Orders',
      @level2type = N'COLUMN', @level2name = N'ShipCity';

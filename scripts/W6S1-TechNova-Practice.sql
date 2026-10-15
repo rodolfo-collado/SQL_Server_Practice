@@ -274,7 +274,7 @@ WHERE sp.name IN (
 
 -- Ver loggins del servidor
 USE master;
-GO
+
 
 SELECT SP.name                                       AS Login_Name,
        SP.type_desc                                  AS Login_Type,

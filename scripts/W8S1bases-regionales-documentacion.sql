@@ -72,15 +72,6 @@ SELECT s.name             AS [Sinonimo_Local],
 FROM sys.synonyms s;
 GO
 
--- Crear sinónimo
-IF OBJECT_ID(N'dbo.syn_REGION_3', N'SN') IS NOT NULL
-    DROP SYNONYM dbo.syn_REGION_3;
-GO
-
-CREATE SYNONYM dbo.syn_REGION_3
-    FOR [SERVIDOR_REGION3].[BD_REGION_3].[dbo].[CONSUMO_REGIONAL];
-GO
-
 
 -- ============================================================================
 -- SCRIPT 3: TRAZABILIDAD Y MAPEO DE DEPENDENCIAS (sys.sql_expression_dependencies)
@@ -102,7 +93,6 @@ WHERE d.referenced_entity_name LIKE '%CONSUMO%'
    OR o.name LIKE '%VW_CONSUMO%'
 ORDER BY o.name;
 GO
-
 
 
 -- ============================================================================
