@@ -228,94 +228,194 @@ RESTORE VERIFYONLY
     WITH CHECKSUM;
 
 -- ==========================================================================
--- Restauraciones de Bases de Datos (Origen | Destino)
+-- Restauraciones de Bases de Datos en instancia Origen
 -- ==========================================================================
 
--- mssql-dev
-
 USE master;
+
+-- SINSA
+
+ALTER DATABASE SINSA
+    SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
 RESTORE DATABASE SINSA
     FROM DISK = '/var/opt/mssql/backup/SINSA_mssql-dev.bak'
     WITH REPLACE, STATS = 10;
 
+ALTER DATABASE SINSA
+    SET MULTI_USER;
+
+-- Northwind
+
+ALTER DATABASE Northwind
+    SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
 RESTORE DATABASE Northwind
     FROM DISK = '/var/opt/mssql/backup/Northwind_mssql-dev.bak'
     WITH REPLACE, STATS = 10;
 
+ALTER DATABASE Northwind
+    SET MULTI_USER;
+
+-- BaseDatosOrigen
+
+ALTER DATABASE BaseDatosOrigen
+    SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
 RESTORE DATABASE BaseDatosOrigen
     FROM DISK = '/var/opt/mssql/backup/BaseDatosOrigen_mssql-dev.bak'
     WITH REPLACE, STATS = 10;
 
+ALTER DATABASE BaseDatosOrigen
+    SET MULTI_USER;
+
+-- LaboratorioBackup
+
+ALTER DATABASE LaboratorioBackup
+    SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
 RESTORE DATABASE LaboratorioBackup
     FROM DISK = '/var/opt/mssql/backup/LaboratorioBackup_mssql-dev.bak'
     WITH REPLACE, STATS = 10;
 
+ALTER DATABASE LaboratorioBackup
+    SET MULTI_USER;
+
+-- Sistema_Nomina
+
+ALTER DATABASE Sistema_Nomina
+    SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
 RESTORE DATABASE Sistema_Nomina
     FROM DISK = '/var/opt/mssql/backup/Sistema_Nomina_mssql-dev.bak'
     WITH REPLACE, STATS = 10;
 
+ALTER DATABASE Sistema_Nomina
+    SET MULTI_USER;
+
+-- Practica_Bulk_Cursores
+
+ALTER DATABASE Practica_Bulk_Cursores
+    SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
 RESTORE DATABASE Practica_Bulk_Cursores
     FROM DISK = '/var/opt/mssql/backup/Practica_Bulk_Cursores_mssql-dev.bak'
     WITH REPLACE, STATS = 10;
 
+ALTER DATABASE Practica_Bulk_Cursores
+    SET MULTI_USER;
+
+-- TechNova_Central
+
+ALTER DATABASE TechNova_Central
+    SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
 RESTORE DATABASE TechNova_Central
     FROM DISK = '/var/opt/mssql/backup/TechNova_Central_mssql-dev.bak'
     WITH REPLACE, STATS = 10;
 
+ALTER DATABASE TechNova_Central
+    SET MULTI_USER;
+
+-- TechNova_Sinonimos
+
+ALTER DATABASE TechNova_Sinonimos
+    SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
 RESTORE DATABASE TechNova_Sinonimos
     FROM DISK = '/var/opt/mssql/backup/TechNova_Sinonimos_mssql-dev.bak'
     WITH REPLACE, STATS = 10;
 
+ALTER DATABASE TechNova_Sinonimos
+    SET MULTI_USER;
+
+-- Ventas_Norte
+
+ALTER DATABASE Ventas_Norte
+    SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
 RESTORE DATABASE Ventas_Norte
     FROM DISK = '/var/opt/mssql/backup/Ventas_Norte_mssql-dev.bak'
     WITH REPLACE, STATS = 10;
 
+ALTER DATABASE Ventas_Norte
+    SET MULTI_USER;
+
+-- BD_REGION_1
+
+ALTER DATABASE BD_REGION_1
+    SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
 RESTORE DATABASE BD_REGION_1
     FROM DISK = '/var/opt/mssql/backup/BD_REGION_1_mssql-dev.bak'
     WITH REPLACE, STATS = 10;
 
+ALTER DATABASE BD_REGION_1
+    SET MULTI_USER;
+
+-- BD_REGION_2
+
+ALTER DATABASE BD_REGION_2
+    SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
 RESTORE DATABASE BD_REGION_2
     FROM DISK = '/var/opt/mssql/backup/BD_REGION_2_mssql-dev.bak'
     WITH REPLACE, STATS = 10;
 
+ALTER DATABASE BD_REGION_2
+    SET MULTI_USER;
 
-RESTORE DATABASE master
-    FROM DISK = '/var/opt/mssql/backup/master_mssql-dev.bak'
-    WITH REPLACE, STATS = 10;
 
--- mssql-lab
+-- ==========================================================================
+-- Restauraciones de Bases de Datos en instancia Destino
+-- ==========================================================================
+
+USE master;
+
+-- BaseDatosDestino
+
+ALTER DATABASE BaseDatosDestino
+    SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
 RESTORE DATABASE BaseDatosDestino
     FROM DISK = '/var/opt/mssql/backup/BaseDatosDestino_mssql-lab.bak'
     WITH REPLACE, STATS = 10;
 
+ALTER DATABASE BaseDatosDestino
+    SET MULTI_USER;
+
+-- BD_REGION_3
+
+ALTER DATABASE BD_REGION_3
+    SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
 RESTORE DATABASE BD_REGION_3
     FROM DISK = '/var/opt/mssql/backup/BD_REGION_3_mssql-lab.bak'
     WITH REPLACE, STATS = 10;
 
+ALTER DATABASE BD_REGION_3
+    SET MULTI_USER;
+
+-- TechNova_Bodega
+
+ALTER DATABASE TechNova_Bodega
+    SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
 RESTORE DATABASE TechNova_Bodega
     FROM DISK = '/var/opt/mssql/backup/TechNova_Bodega_mssql-lab.bak'
     WITH REPLACE, STATS = 10;
 
+ALTER DATABASE TechNova_Bodega
+    SET MULTI_USER;
+
+-- Ventas_Sur
+
+ALTER DATABASE Ventas_Sur
+    SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
 
 RESTORE DATABASE Ventas_Sur
     FROM DISK = '/var/opt/mssql/backup/Ventas_Sur_mssql-lab.bak'
     WITH REPLACE, STATS = 10;
 
-
-RESTORE DATABASE master
-    FROM DISK = '/var/opt/mssql/backup/master_mssql-lab.bak'
-    WITH REPLACE, STATS = 10;
+ALTER DATABASE Ventas_Sur
+    SET MULTI_USER;
