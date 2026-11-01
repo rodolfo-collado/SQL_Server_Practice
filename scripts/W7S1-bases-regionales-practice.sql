@@ -235,6 +235,8 @@ CREATE TABLE dbo.CONSUMO_REGIONAL
 );
 
 --Crear credenciales remotas para el servidor
+USE master;
+
 IF NOT EXISTS (SELECT 1
                FROM sys.server_principals
                WHERE name = N'LoginRegion3')
@@ -253,15 +255,26 @@ IF NOT EXISTS (SELECT 1
             FOR LOGIN LoginRegion3;
     END;
 
-IF IS_ROLEMEMBER(N'db_datawriter', N'UsuarioRegion3') <> 1
-    BEGIN
-        ALTER ROLE db_datawriter
-            ADD MEMBER UsuarioRegion3;
-    END;
+-- Reasociar el usuario al login por si se restauro la base.
+ALTER USER UsuarioRegion3 WITH LOGIN = LoginRegion3;
+
+GRANT SELECT, INSERT, UPDATE, DELETE
+    ON OBJECT::dbo.CONSUMO_REGIONAL
+    TO UsuarioRegion3;
+GO
 
 
 -- SERVIDOR ENLAZADO (mssql-dev) de BD_REGION_3
 USE master;
+
+-- Eliminar servidor si ya existe
+IF EXISTS (SELECT 1
+           FROM sys.servers
+           WHERE name = N'SERVIDOR_REGION3')
+    EXEC sys.sp_dropserver
+         @server = N'SERVIDOR_REGION3',
+         @droplogins = N'droplogins';
+GO
 
 -- Crear Servidor enlazado
 IF NOT EXISTS (SELECT 1
@@ -269,12 +282,12 @@ IF NOT EXISTS (SELECT 1
                WHERE name = N'SERVIDOR_REGION3')
     BEGIN
 
-        EXEC master.dbo.sp_addlinkedserver
+        EXEC sys.sp_addlinkedserver
              @server = N'SERVIDOR_REGION3',
              @srvproduct = N'',
              @provider = N'MSOLEDBSQL',
              @datasrc = N'mssql-lab,1433',
-             @provstr = N'Encrypt=Optional;TrustServerCertificate=Yes;User ID=LoginRegion3;UID=LoginRegion3',
+             @provstr = N'Encrypt=Optional;TrustServerCertificate=Yes',
              @catalog = N'BD_REGION_3';
     END;
 
