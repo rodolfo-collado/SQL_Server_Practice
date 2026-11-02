@@ -255,6 +255,11 @@ BEGIN
 END;
 GO
 
+-- Ejemplo de uso
+EXEC dbo.usp_ProcesarTransferenciaStock
+    @ProductID_Origen = 999999,
+    @ProductID_Destino = 2,
+    @CantidadTransferir = 5;
 
 -- ============================================================================
 -- SECCIÓN 6: AUDITORÍA DE METADATOS Y TRAZABILIDAD (sys.objects, sys.parameters)
@@ -276,3 +281,19 @@ WHERE o.type IN ('FN', 'IF', 'TF', 'P') -- FN: Scalar, IF: Inline TVF, TF: Table
   AND o.is_ms_shipped = 0
 ORDER BY o.type, o.name, p.parameter_id;
 GO
+
+-- ============================================================================
+-- Restauracion de base de datos Northwind
+-- ============================================================================
+USE master;
+GO
+
+ALTER DATABASE Northwind
+    SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+
+RESTORE DATABASE Northwind
+    FROM DISK = '/var/opt/mssql/backup/Northwind_mssql-dev.bak'
+    WITH REPLACE, STATS = 10;
+
+ALTER DATABASE Northwind
+    SET MULTI_USER;
