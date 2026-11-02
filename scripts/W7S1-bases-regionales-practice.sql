@@ -236,6 +236,7 @@ CREATE TABLE dbo.CONSUMO_REGIONAL
 
 --Crear credenciales remotas para el servidor
 USE master;
+GO
 
 IF NOT EXISTS (SELECT 1
                FROM sys.server_principals
@@ -264,8 +265,10 @@ GRANT SELECT, INSERT, UPDATE, DELETE
 GO
 
 
--- SERVIDOR ENLAZADO (mssql-dev) de BD_REGION_3
+-- mssql-dev
+-- SERVIDOR ENLAZADO de BD_REGION_3
 USE master;
+GO
 
 -- Eliminar servidor si ya existe
 IF EXISTS (SELECT 1
@@ -311,7 +314,7 @@ IF NOT EXISTS (SELECT 1
 EXEC master.dbo.sp_testlinkedserver N'SERVIDOR_REGION3';
 
 -- Crear sinónimo del servidor en master
-USE BD_REGION_1;
+USE master;
 IF OBJECT_ID(N'dbo.syn_REGION_3', N'SN') IS NOT NULL
     DROP SYNONYM dbo.syn_REGION_3;
 GO
@@ -320,12 +323,17 @@ CREATE SYNONYM dbo.syn_REGION_3
     FOR [SERVIDOR_REGION3].[BD_REGION_3].[dbo].[CONSUMO_REGIONAL];
 GO
 
+-- Verificar creación del servidor
+SELECT *
+FROM sys.servers;
+
 -- ===================================
 -- === 6. Fragmentación Horizontal ===
 -- ===================================
 
 -- mssql-dev
 USE Practica_Bulk_Cursores;
+GO
 
 TRUNCATE TABLE BD_REGION_1.dbo.CONSUMO_REGIONAL;
 TRUNCATE TABLE BD_REGION_2.dbo.CONSUMO_REGIONAL;
@@ -371,13 +379,14 @@ USE BD_REGION_3;
 
 TRUNCATE TABLE dbo.CONSUMO_REGIONAL;
 
--- Ejecutar en master en mssql-dev luego del truncate table de mssql-lab
-USE master;
-
 -- Brindar permisos de insert y select a UsuarioRegion3 (en caso de fallo en la detección del rol de datawriter)
 GRANT INSERT, SELECT
     ON OBJECT::dbo.CONSUMO_REGIONAL
     TO UsuarioRegion3;
+
+-- mssql-dev
+USE master;
+GO
 
 INSERT INTO [SERVIDOR_REGION3].[BD_REGION_3].[dbo].[CONSUMO_REGIONAL]
 (ABONADO,
@@ -411,6 +420,7 @@ WHERE A.ZONA IN ('ZONA CENTRO', 'REGIONES AUTONOMAS');
 -- === 7. Validación ===
 -- =====================
 USE Practica_Bulk_Cursores;
+GO
 
 SELECT 'CENTRAL_CON_MAPEO_VALIDO'     AS ORIGEN,
        COUNT_BIG(*)                   AS REGISTROS,
@@ -487,8 +497,10 @@ FROM [SERVIDOR_REGION3].[BD_REGION_3].[dbo].[CONSUMO_REGIONAL];
 -- ============================================
 -- === 9. Consultas analíticas distribuidas ===
 -- ============================================
+USE master;
+GO
 
-
+-- Resume el ingreso total por zona, de mayor a menor.
 WITH GLOBAL AS (SELECT *
                 FROM BD_REGION_1.dbo.CONSUMO_REGIONAL
                 UNION ALL
@@ -503,6 +515,7 @@ GROUP BY ZONA
 ORDER BY INGRESO_TOTAL DESC;
 GO
 
+-- Resume los MB y minutos consumidos en cada zona.
 WITH GLOBAL AS (SELECT *
                 FROM BD_REGION_1.dbo.CONSUMO_REGIONAL
                 UNION ALL
@@ -517,6 +530,7 @@ GROUP BY ZONA
 ORDER BY ZONA;
 GO
 
+-- Cuenta los abonados distintos registrados en cada zona.
 WITH GLOBAL AS (SELECT *
                 FROM BD_REGION_1.dbo.CONSUMO_REGIONAL
                 UNION ALL
@@ -531,6 +545,7 @@ GROUP BY ZONA
 ORDER BY ZONA;
 GO
 
+-- Resume MB, minutos e ingreso por mes y zona.
 WITH GLOBAL AS (SELECT *
                 FROM BD_REGION_1.dbo.CONSUMO_REGIONAL
                 UNION ALL
@@ -549,6 +564,7 @@ GROUP BY DIA / 100, ZONA
 ORDER BY MES, ZONA;
 GO
 
+-- Muestra las diez antenas con mayor ingreso total.
 WITH GLOBAL AS (SELECT *
                 FROM BD_REGION_1.dbo.CONSUMO_REGIONAL
                 UNION ALL
@@ -564,6 +580,7 @@ GROUP BY ANTENA
 ORDER BY INGRESO_TOTAL DESC;
 GO
 
+-- Muestra los diez abonados con mayor consumo de MB.
 WITH GLOBAL AS (SELECT *
                 FROM BD_REGION_1.dbo.CONSUMO_REGIONAL
                 UNION ALL
@@ -579,6 +596,7 @@ GROUP BY ABONADO
 ORDER BY MB_TOTAL DESC;
 GO
 
+-- Resume la cantidad de eventos por zona y línea de negocio.
 WITH GLOBAL AS (SELECT *
                 FROM BD_REGION_1.dbo.CONSUMO_REGIONAL
                 UNION ALL
@@ -593,6 +611,7 @@ GROUP BY ZONA, LNEGOCIO
 ORDER BY ZONA, LNEGOCIO;
 GO
 
+-- Compara el ingreso total aportado por cada nodo regional.
 SELECT 'NODO 1' AS NODO, SUM(INGRESO) AS INGRESO
 FROM BD_REGION_1.dbo.CONSUMO_REGIONAL
 UNION ALL
@@ -649,15 +668,18 @@ SELECT ABONADO,
 FROM syn_REGION_3;
 GO
 
+-- Resume el ingreso total por zona usando la vista nacional.
 SELECT ZONA, SUM(INGRESO) AS INGRESO_TOTAL
 FROM dbo.VW_CONSUMO_NACIONAL
 GROUP BY ZONA;
 
+-- Resume los MB consumidos por mes usando la vista nacional.
 SELECT DIA / 100 AS MES, SUM(MB) AS MB_TOTAL
 FROM dbo.VW_CONSUMO_NACIONAL
 GROUP BY DIA / 100
 ORDER BY MES;
 
+-- Muestra los diez abonados con mayor ingreso total.
 SELECT TOP (10) ABONADO, SUM(INGRESO) AS INGRESO_TOTAL
 FROM dbo.VW_CONSUMO_NACIONAL
 GROUP BY ABONADO
