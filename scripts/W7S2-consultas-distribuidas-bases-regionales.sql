@@ -36,11 +36,13 @@ IMPORTANTE:
  EJERCICIO 1. VERIFICAR LOS DATOS LOCALES
 =====================================================================*/
 
+--1.1
 SELECT
     COUNT(*) AS TOTAL_REGISTROS,
     COUNT(DISTINCT ABONADO) AS TOTAL_ABONADOS
 FROM BD_REGION_1.dbo.CONSUMO_REGIONAL;
 
+--1.2
 SELECT
     COUNT(*) AS TOTAL_REGISTROS,
     COUNT(DISTINCT ABONADO) AS TOTAL_ABONADOS
@@ -53,6 +55,7 @@ FROM BD_REGION_2.dbo.CONSUMO_REGIONAL;
 
 EXEC master.dbo.sp_testlinkedserver N'SERVIDOR_REGION3';
 
+--2.1
 SELECT TOP (10) *
 FROM [SERVIDOR_REGION3].[BD_REGION_3].[dbo].[CONSUMO_REGIONAL];
 
@@ -61,6 +64,7 @@ FROM [SERVIDOR_REGION3].[BD_REGION_3].[dbo].[CONSUMO_REGIONAL];
  EJERCICIO 3. COMPARAR CANTIDAD DE REGISTROS POR REGIÓN
 =====================================================================*/
 
+--3.1
 SELECT 'REGION 1' AS REGION, COUNT(*) AS TOTAL_REGISTROS
 FROM BD_REGION_1.dbo.CONSUMO_REGIONAL
 
@@ -82,6 +86,7 @@ FROM [SERVIDOR_REGION3].[BD_REGION_3].[dbo].[CONSUMO_REGIONAL];
  ejecutarse de manera independiente.
 =====================================================================*/
 
+--3.2
 WITH CONSUMO_NACIONAL AS
 (
     SELECT ABONADO, TRAMO, LNEGOCIO, SEGMENTO, DIA, ANTENA,
@@ -109,6 +114,7 @@ ORDER BY DIA, ZONA, ABONADO;
  EJERCICIO 4. INGRESO TOTAL POR ZONA
 =====================================================================*/
 
+--4.1
 WITH CONSUMO_NACIONAL AS
 (
     SELECT ZONA, INGRESO FROM BD_REGION_1.dbo.CONSUMO_REGIONAL
@@ -130,6 +136,7 @@ ORDER BY TOTAL_INGRESO DESC;
  EJERCICIO 5. CASE WHEN - CLASIFICACIÓN DEL CONSUMO DE MB
 =====================================================================*/
 
+--5.1
 WITH CONSUMO_NACIONAL AS
 (
     SELECT ABONADO, DIA, ZONA, MB, INGRESO
@@ -158,6 +165,7 @@ SELECT
 FROM CONSUMO_NACIONAL;
 
 -- DUPLCIADO CLASES
+--5.2
 WITH CONSUMO_NACIONAL AS
 (
     SELECT ABONADO, DIA, ZONA, MB, INGRESO
@@ -208,6 +216,7 @@ group by ZONA,
  EJERCICIO 6. SUM(CASE WHEN...) - INGRESO POR ZONA EN COLUMNAS
 =====================================================================*/
 
+--6.1
 WITH CONSUMO_NACIONAL AS
 (
     SELECT ZONA, INGRESO FROM BD_REGION_1.dbo.CONSUMO_REGIONAL
@@ -240,6 +249,7 @@ SELECT
 FROM CONSUMO_NACIONAL;
 
 -- duplicado clases
+--6.2
 WITH CONSUMO_NACIONAL AS
 (
     SELECT ZONA, sum(INGRESO) monto, dia FROM BD_REGION_1.dbo.CONSUMO_REGIONAL
@@ -281,6 +291,7 @@ order by 1 ;
 
 
 -- RETO CON MB 
+--6.3
 WITH CONSUMO_NACIONAL AS
 (
     SELECT ZONA, MB FROM BD_REGION_1.dbo.CONSUMO_REGIONAL
@@ -316,6 +327,7 @@ FROM CONSUMO_NACIONAL;
  EJERCICIO 7. SUM(CASE WHEN...) POR MES
 =====================================================================*/
 
+--7.1
 WITH CONSUMO_NACIONAL AS
 (
     SELECT DIA, ZONA, INGRESO FROM BD_REGION_1.dbo.CONSUMO_REGIONAL
@@ -355,6 +367,7 @@ ORDER BY PERIODO;
  EJERCICIO 8. AVG - PROMEDIOS POR ZONA
 =====================================================================*/
 
+--8.1
 WITH CONSUMO_NACIONAL AS
 (
     SELECT ZONA, EVENTOS, MB, MINUTOS, INGRESO
@@ -381,6 +394,7 @@ ORDER BY ZONA;
  EJERCICIO 9. MIN Y MAX POR ZONA
 =====================================================================*/
 
+--9.1
 WITH CONSUMO_NACIONAL AS
 (
     SELECT ZONA, MB, MINUTOS, INGRESO
@@ -405,6 +419,7 @@ GROUP BY ZONA
 ORDER BY ZONA;
 
 --duplicado clases
+--9.2
 WITH CONSUMO_NACIONAL AS
 (
     SELECT ZONA, MB, MINUTOS, INGRESO, dia
@@ -435,6 +450,7 @@ ORDER BY zona;
  EJERCICIO 10. SUM + AVG + MIN + MAX POR MES
 =====================================================================*/
 
+--10.1
 WITH CONSUMO_NACIONAL AS
 (
     SELECT DIA, MB, INGRESO FROM BD_REGION_1.dbo.CONSUMO_REGIONAL
@@ -460,6 +476,7 @@ ORDER BY PERIODO;
  EJERCICIO 11. CASE WHEN + GROUP BY
 =====================================================================*/
 
+--11.1
 WITH CONSUMO_NACIONAL AS
 (
     SELECT MB, INGRESO FROM BD_REGION_1.dbo.CONSUMO_REGIONAL
@@ -498,6 +515,7 @@ ORDER BY CLASIFICACION;
  EJERCICIO 12. TOP 10 ANTENAS POR TRÁFICO NACIONAL
 =====================================================================*/
 
+--12.1
 WITH CONSUMO_NACIONAL AS
 (
     SELECT ANTENA, ZONA, MB, MINUTOS, INGRESO
@@ -527,6 +545,7 @@ ORDER BY TOTAL_MB DESC;
  EJERCICIO 13. OPENQUERY - ESTADÍSTICAS DE REGION 3
 =====================================================================*/
 
+--13.1
 SELECT *
 FROM OPENQUERY(
     SERVIDOR_REGION3,
@@ -542,6 +561,7 @@ FROM OPENQUERY(
 
 /* RETO FINAL */ 
 -- 1 
+--13.2
 WITH CONSUMO_NACIONAL AS
 (
     SELECT DIA, ZONA, INGRESO
@@ -591,6 +611,7 @@ INNER JOIN TOTALES T
 ORDER BY R.PERIODO, R.ZONA;
 
 --2 
+--13.3
 WITH CONSUMO_NACIONAL AS
 (
     SELECT DIA, ZONA, INGRESO
@@ -636,6 +657,7 @@ ORDER BY PERIODO;
  RANKING MENSUAL: TOP 5 ANTENAS POR ZONA SEGÚN MB
 =====================================================================*/
 
+--14.1
 WITH CONSUMO_NACIONAL AS
 (
     SELECT DIA, ZONA, ANTENA, MB
@@ -687,6 +709,7 @@ ORDER BY PERIODO, ZONA, POSICION;
  TOP 10 ANTENAS POR ZONA SEGÚN INGRESO
 =====================================================================*/
 
+--15.1
 WITH CONSUMO_NACIONAL AS
 (
     SELECT ZONA, ANTENA, MB, MINUTOS, INGRESO
@@ -741,6 +764,7 @@ ORDER BY ZONA, POSICION;
  RANKING MENSUAL DE ZONAS SEGÚN INGRESO
 =====================================================================*/
 
+--16.1
 WITH CONSUMO_NACIONAL AS
 (
     SELECT DIA, ZONA, MB, MINUTOS, INGRESO
@@ -794,6 +818,7 @@ ORDER BY PERIODO, POSICION;
  TOP 5 ANTENAS POR LÍNEA DE NEGOCIO SEGÚN MB
 =====================================================================*/
 
+--17.1
 WITH CONSUMO_NACIONAL AS
 (
     SELECT LNEGOCIO, ANTENA, MB, INGRESO
@@ -848,6 +873,7 @@ ORDER BY LNEGOCIO, POSICION;
  CLASIFICAR ANTENAS SEGÚN SU POSICIÓN NACIONAL
 =====================================================================*/
 
+--18.1
 WITH CONSUMO_NACIONAL AS
 (
     SELECT ANTENA, MB
@@ -901,6 +927,7 @@ ORDER BY POSICION;
  EJERCICIO 19. SUM(CASE WHEN...) SOBRE LA CLASIFICACIÓN DEL RANKING
 =====================================================================*/
 
+--19.1
 WITH CONSUMO_NACIONAL AS
 (
     SELECT ANTENA, MB
@@ -944,6 +971,7 @@ SELECT
 FROM RANKING;
 
 /* REPORTE CONSOLIDADO */ 
+--19.2
 WITH CONSUMO_NACIONAL AS
 (
     SELECT 
@@ -1017,6 +1045,7 @@ ORDER BY
  SUM + AVG + MIN + MAX + CASE WHEN + SUM(CASE WHEN...) + ROW_NUMBER()
 =====================================================================*/
 
+--20.1
 WITH CONSUMO_NACIONAL AS
 (
     SELECT DIA, ZONA, MB, MINUTOS, INGRESO
